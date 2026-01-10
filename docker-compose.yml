@@ -1,0 +1,28 @@
+version: '3.8'
+
+services:
+  postgres:
+    image: postgres:15-alpine
+    container_name: wallet-pix-postgres
+    environment:
+      POSTGRES_DB: walletpix
+      POSTGRES_USER: walletpix
+      POSTGRES_PASSWORD: walletpix123
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - wallet-pix-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U walletpix -d walletpix"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  postgres_data:
+
+networks:
+  wallet-pix-network:
+    driver: bridge
