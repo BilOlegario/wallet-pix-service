@@ -5,12 +5,15 @@ import br.com.walletpix.domain.valueobject.PixKeyType;
 import br.com.walletpix.presentation.dto.CreateWalletResponseDto;
 import br.com.walletpix.presentation.dto.RegisterPixKeyRequestDto;
 import br.com.walletpix.presentation.dto.RegisterPixKeyResponseDto;
+import br.com.walletpix.presentation.dto.TransactionRequestDto;
+import br.com.walletpix.presentation.exception.ErrorResponse;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.web.client.TestRestTemplate;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 
+import java.math.BigDecimal;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -39,7 +42,8 @@ public class WalletControllerIntegrationTest extends BaseIntegrationTest {
                                 "/wallets/" + walletId + "/pix-keys", registerRequest, RegisterPixKeyResponseDto.class);
 
                 assertThat(registerResponse.getStatusCode()).isEqualTo(HttpStatus.CREATED);
-                assertThat(registerResponse.getBody().getValue()).isEqualTo("test@example.com");
+                assertThat(registerResponse.getBody().getType()).isEqualTo(PixKeyType.EMAIL);
+                assertThat(registerResponse.getBody().getKey()).isEqualTo("test@example.com");
         }
 
         @Test
@@ -57,22 +61,49 @@ public class WalletControllerIntegrationTest extends BaseIntegrationTest {
                                 "/wallets/" + walletId + "/pix-keys", registerRequest, RegisterPixKeyResponseDto.class);
 
                 assertThat(registerResponse.getStatusCode()).isEqualTo(HttpStatus.CREATED);
-                assertThat(registerResponse.getBody().getValue()).isNotNull();
-                assertThat(registerResponse.getBody().getValue()).isNotEmpty();
+                assertThat(registerResponse.getBody().getType()).isEqualTo(PixKeyType.EVP);
+                assertThat(registerResponse.getBody().getKey()).isNotNull();
+                assertThat(registerResponse.getBody().getKey()).isNotEmpty();
         }
 
         @Test
-        void shouldReturnBadRequestWhenWalletNotFound() {
+        void shouldReturnNotFoundWhenWalletNotFoundOnPixKeyRegistration() {
                 RegisterPixKeyRequestDto registerRequest = new RegisterPixKeyRequestDto();
                 registerRequest.setType(PixKeyType.CPF);
                 registerRequest.setValue("12345678901");
 
-                ResponseEntity<Void> registerResponse = restTemplate.postForEntity(
-                                "/wallets/" + UUID.randomUUID() + "/pix-keys", registerRequest, Void.class);
+                ResponseEntity<ErrorResponse> response = restTemplate.postForEntity(
+                                "/wallets/" + UUID.randomUUID() + "/pix-keys", registerRequest, ErrorResponse.class);
 
-                // O Use Case lança IllegalArgumentException, que o Spring mapeia para 500 por
-                // padrão se não houver handler.
-                // Em um sistema real teríamos um GlobalExceptionHandler.
-                assertThat(registerResponse.getStatusCode()).isEqualTo(HttpStatus.INTERNAL_SERVER_ERROR);
+                assertThat(response.getStatusCode()).isEqualTo(HttpStatus.NOT_FOUND);
+                assertThat(response.getBody().getMessage()).isEqualTo("Carteira não encontrada");
+        }
+
+        @Test
+        void shouldReturnNotFoundWhenWalletNotFoundOnDeposit() {
+                TransactionRequestDto request = new TransactionRequestDto(new BigDecimal("10.00"));
+
+                ResponseEntity<ErrorResponse> response = restTemplate.postForEntity(
+                                "/wallets/" + UUID.randomUUID() + "/deposit", request, ErrorResponse.class);
+
+                assertThat(response.getStatusCode()).isEqualTo(HttpStatus.NOT_FOUND);
+                assertThat(response.getBody().getMessage()).isEqualTo("Carteira não encontrada");
+        }
+
+        @Test
+        void shouldReturnUnprocessableEntityWhenInsufficientBalance() {
+                // 1. Create Wallet (starts with zero balance)
+                ResponseEntity<CreateWalletResponseDto> createResponse = restTemplate.postForEntity(
+                                "/wallets", null, CreateWalletResponseDto.class);
+                UUID walletId = createResponse.getBody().getId();
+
+                // 2. Try to withdraw 10.00 from empty wallet
+                TransactionRequestDto request = new TransactionRequestDto(new BigDecimal("10.00"));
+
+                ResponseEntity<ErrorResponse> response = restTemplate.postForEntity(
+                                "/wallets/" + walletId + "/withdraw", request, ErrorResponse.class);
+
+                assertThat(response.getStatusCode()).isEqualTo(HttpStatus.UNPROCESSABLE_ENTITY);
+                assertThat(response.getBody().getMessage()).isEqualTo("Saldo insuficiente para realizar a operação");
         }
 }

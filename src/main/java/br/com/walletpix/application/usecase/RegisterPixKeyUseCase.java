@@ -1,6 +1,7 @@
 package br.com.walletpix.application.usecase;
 
 import br.com.walletpix.domain.entity.PixKey;
+import br.com.walletpix.domain.exception.WalletNotFoundException;
 import br.com.walletpix.domain.repository.PixKeyRepository;
 import br.com.walletpix.domain.repository.WalletRepository;
 import br.com.walletpix.domain.valueobject.PixKeyType;
@@ -18,9 +19,9 @@ public class RegisterPixKeyUseCase {
     private final WalletRepository walletRepository;
 
     @Transactional
-    public String execute(UUID walletId, PixKeyType type, String value) {
+    public PixKey execute(UUID walletId, PixKeyType type, String value) {
         walletRepository.findById(walletId)
-                .orElseThrow(() -> new IllegalArgumentException("Wallet not found"));
+                .orElseThrow(WalletNotFoundException::new);
 
         String keyValue = value;
         if (type == PixKeyType.EVP) {
@@ -35,6 +36,6 @@ public class RegisterPixKeyUseCase {
 
         PixKey pixKey = new PixKey(UUID.randomUUID(), walletId, type, keyValue);
         pixKeyRepository.save(pixKey);
-        return keyValue;
+        return pixKey;
     }
 }

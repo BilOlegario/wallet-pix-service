@@ -1,5 +1,6 @@
 package br.com.walletpix.domain.valueobject;
 
+import br.com.walletpix.domain.exception.InsufficientBalanceException;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.util.Objects;
@@ -31,7 +32,7 @@ public final class Money {
     public Money subtract(Money other) {
         BigDecimal result = this.amount.subtract(other.amount);
         if (result.compareTo(BigDecimal.ZERO) < 0) {
-            throw new IllegalStateException("Insufficient balance or negative result not allowed for this operation");
+            throw new InsufficientBalanceException();
         }
         return new Money(result);
     }
