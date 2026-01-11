@@ -2,9 +2,14 @@ package br.com.walletpix.infrastructure.persistence.repository;
 
 import br.com.walletpix.domain.entity.LedgerEntry;
 import br.com.walletpix.domain.repository.LedgerRepository;
+import br.com.walletpix.domain.valueobject.Money;
 import br.com.walletpix.infrastructure.persistence.entity.LedgerJpaEntity;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
+
+import java.math.BigDecimal;
+import java.time.LocalDateTime;
+import java.util.UUID;
 
 @Component
 @RequiredArgsConstructor
@@ -23,5 +28,11 @@ public class LedgerRepositoryImpl implements LedgerRepository {
                 .createdAt(entry.getCreatedAt())
                 .build();
         jpaRepository.save(jpaEntity);
+    }
+
+    @Override
+    public Money getBalanceAt(UUID walletId, LocalDateTime at) {
+        BigDecimal sum = jpaRepository.sumAmountByWalletIdAndCreatedAtBefore(walletId, at);
+        return sum != null ? new Money(sum) : Money.ZERO;
     }
 }

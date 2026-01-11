@@ -16,9 +16,9 @@
 - [x] Implementar `POST /wallets/{id}/withdraw`
 - [x] Validar Optimistic Locking e Ledger inicial
 
-## Slice 3: Consulta e Auditoria
-- [ ] Implementar `GET /wallets/{id}/balance` (Atual)
-- [ ] Implementar `GET /wallets/{id}/balance?at=...` (Histórico)
+## Slice 3: Consulta e Auditoria (Concluída)
+- [x] Implementar `GET /wallets/{id}/balance` (Atual)
+- [x] Implementar `GET /wallets/{id}/balance?at=...` (Histórico)
 
 ## Slice 4: Fluxo Pix e Idempotência
 - [ ] Implementar `POST /pix/transfers`
