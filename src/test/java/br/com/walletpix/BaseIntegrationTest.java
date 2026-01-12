@@ -34,6 +34,8 @@ public abstract class BaseIntegrationTest {
 
     @BeforeEach
     void cleanDatabase() {
+        jdbcTemplate.execute("TRUNCATE TABLE idempotency CASCADE");
+        jdbcTemplate.execute("TRUNCATE TABLE pix_transfers CASCADE");
         jdbcTemplate.execute("TRUNCATE TABLE ledger_entries CASCADE");
         jdbcTemplate.execute("TRUNCATE TABLE pix_keys CASCADE");
         jdbcTemplate.execute("TRUNCATE TABLE wallets CASCADE");

@@ -1,4 +1,7 @@
 C:\Users\Gabriel\Desktop\Codes\wallet-pix-service\src\test\java\br\com\walletpix\BaseIntegrationTest.java
+C:\Users\Gabriel\Desktop\Codes\wallet-pix-service\src\test\java\br\com\walletpix\domain\valueobject\MoneyTest.java
 C:\Users\Gabriel\Desktop\Codes\wallet-pix-service\src\test\java\br\com\walletpix\presentation\controller\WalletControllerBalanceIntegrationTest.java
+C:\Users\Gabriel\Desktop\Codes\wallet-pix-service\src\test\java\br\com\walletpix\presentation\controller\PixTransferIntegrationTest.java
 C:\Users\Gabriel\Desktop\Codes\wallet-pix-service\src\test\java\br\com\walletpix\presentation\controller\ConcurrencyIntegrationTest.java
+C:\Users\Gabriel\Desktop\Codes\wallet-pix-service\src\test\java\br\com\walletpix\domain\entity\WalletTest.java
 C:\Users\Gabriel\Desktop\Codes\wallet-pix-service\src\test\java\br\com\walletpix\presentation\controller\WalletControllerIntegrationTest.java

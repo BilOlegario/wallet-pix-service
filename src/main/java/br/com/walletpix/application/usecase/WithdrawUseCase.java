@@ -8,6 +8,9 @@ import br.com.walletpix.domain.repository.LedgerRepository;
 import br.com.walletpix.domain.valueobject.Money;
 import br.com.walletpix.domain.valueobject.LedgerEntryType;
 import lombok.RequiredArgsConstructor;
+import org.springframework.orm.ObjectOptimisticLockingFailureException;
+import org.springframework.retry.annotation.Backoff;
+import org.springframework.retry.annotation.Retryable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -22,6 +25,7 @@ public class WithdrawUseCase {
     private final LedgerRepository ledgerRepository;
 
     @Transactional
+    @Retryable(retryFor = ObjectOptimisticLockingFailureException.class, maxAttempts = 10, backoff = @Backoff(delay = 100, multiplier = 2, random = true))
     public void execute(UUID walletId, Money amount) {
         Wallet wallet = walletRepository.findById(walletId)
                 .orElseThrow(WalletNotFoundException::new);

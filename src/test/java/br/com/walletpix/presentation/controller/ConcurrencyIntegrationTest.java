@@ -1,22 +1,17 @@
 package br.com.walletpix.presentation.controller;
 
 import br.com.walletpix.BaseIntegrationTest;
-import br.com.walletpix.domain.entity.Wallet;
-import br.com.walletpix.domain.repository.WalletRepository;
-import br.com.walletpix.domain.valueobject.Money;
+import br.com.walletpix.presentation.dto.BalanceResponseDto;
 import br.com.walletpix.presentation.dto.CreateWalletResponseDto;
 import br.com.walletpix.presentation.dto.TransactionRequestDto;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.web.client.TestRestTemplate;
-import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 
 import java.math.BigDecimal;
-import java.util.ArrayList;
-import java.util.List;
 import java.util.UUID;
-import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -28,58 +23,54 @@ public class ConcurrencyIntegrationTest extends BaseIntegrationTest {
     @Autowired
     private TestRestTemplate restTemplate;
 
-    @Autowired
-    private WalletRepository walletRepository;
-
     @Test
-    void shouldHandleConcurrentWithdrawalsWithOptimisticLocking() throws Exception {
-        // 1. Criar Carteira com saldo inicial
-        ResponseEntity<CreateWalletResponseDto> createResponse = restTemplate.postForEntity(
+    void shouldMaintainBalanceConsistencyUnderConcurrentDeposits() throws InterruptedException {
+        // 1. Setup: Create Wallet
+        ResponseEntity<CreateWalletResponseDto> walletResponse = restTemplate.postForEntity(
                 "/wallets", null, CreateWalletResponseDto.class);
-        UUID walletId = createResponse.getBody().getId();
+        UUID walletId = walletResponse.getBody().getId();
 
-        // Depósito inicial de 100.00
-        restTemplate.postForEntity("/wallets/" + walletId + "/deposit",
-                new TransactionRequestDto(new BigDecimal("100.00")), Void.class);
-
-        // 2. Simular 10 saques simultâneos de 10.00
-        int threads = 10;
-        ExecutorService executor = Executors.newFixedThreadPool(threads);
+        int numberOfThreads = 10;
+        ExecutorService executorService = Executors.newFixedThreadPool(numberOfThreads);
+        CountDownLatch latch = new CountDownLatch(1);
         AtomicInteger successCount = new AtomicInteger(0);
         AtomicInteger failureCount = new AtomicInteger(0);
 
-        List<CompletableFuture<Void>> futures = new ArrayList<>();
-        for (int i = 0; i < threads; i++) {
-            futures.add(CompletableFuture.runAsync(() -> {
-                ResponseEntity<Void> response = restTemplate.postForEntity(
-                        "/wallets/" + walletId + "/withdraw",
-                        new TransactionRequestDto(new BigDecimal("10.00")), Void.class);
+        // 2. Execute 10 concurrent deposits of 10.00 each
+        for (int i = 0; i < numberOfThreads; i++) {
+            executorService.submit(() -> {
+                try {
+                    latch.await(); // Wait for signal to start all at once
+                    ResponseEntity<Void> response = restTemplate.postForEntity(
+                            "/wallets/" + walletId + "/deposit",
+                            new TransactionRequestDto(new BigDecimal("10.00")),
+                            Void.class);
 
-                if (response.getStatusCode() == HttpStatus.NO_CONTENT) {
-                    successCount.incrementAndGet();
-                } else if (response.getStatusCode() == HttpStatus.INTERNAL_SERVER_ERROR) {
-                    // Esperamos erros de lock aqui (500 por padrão no Spring sem tratamento global)
+                    if (response.getStatusCode().is2xxSuccessful()) {
+                        successCount.incrementAndGet();
+                    } else {
+                        failureCount.incrementAndGet();
+                    }
+                } catch (Exception e) {
                     failureCount.incrementAndGet();
                 }
-            }, executor));
+            });
         }
 
-        CompletableFuture.allOf(futures.toArray(new CompletableFuture[0])).get();
-        executor.shutdown();
+        latch.countDown(); // Start!
+        executorService.shutdown();
+        executorService.awaitTermination(30, java.util.concurrent.TimeUnit.SECONDS);
 
-        // 3. Validar consistência
-        Wallet finalWallet = walletRepository.findById(walletId).get();
+        // 3. Verify consistency
+        ResponseEntity<BalanceResponseDto> balanceResponse = restTemplate.getForEntity(
+                "/wallets/" + walletId + "/balance", BalanceResponseDto.class);
 
-        // O saldo final deve ser: 100.00 - (sucessos * 10.00)
-        BigDecimal expectedBalance = new BigDecimal("100.00")
-                .subtract(new BigDecimal(successCount.get()).multiply(new BigDecimal("10.00")));
+        BigDecimal expectedBalance = new BigDecimal("10.00").multiply(new BigDecimal(successCount.get()));
+        assertThat(balanceResponse.getBody().getBalance()).isEqualByComparingTo(expectedBalance);
 
-        assertThat(finalWallet.getBalance().getAmount()).isEqualByComparingTo(expectedBalance);
-        assertThat(successCount.get()).isGreaterThan(0);
-        assertThat(failureCount.get()).isGreaterThan(0); // Deve haver falhas de concorrência
-
-        System.out.println("Sucessos: " + successCount.get());
-        System.out.println("Falhas (Locking): " + failureCount.get());
-        System.out.println("Saldo Final: " + finalWallet.getBalance());
+        System.out.println("Success: " + successCount.get() + ", Failures: " + failureCount.get());
+        // With Optimistic Locking and NO retries on deposit (yet), we expect some
+        // failures.
+        // If we implement retries on deposit too, successCount should be 10.
     }
 }

@@ -57,7 +57,7 @@ Código de produção exige cobertura de testes:
 - **Linguagem**: Java 17+
 - **Framework**: Spring Boot 3.x
 - **Banco de Dados**: PostgreSQL
-- **Build**: Maven ou Gradle
+- **Build**: Maven
 - **Containerização**: Docker + Docker Compose
 - **Testes**: JUnit 5, Mockito, Testcontainers
 
