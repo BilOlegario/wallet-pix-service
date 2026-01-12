@@ -41,81 +41,82 @@ import java.util.UUID;
 @Tag(name = "Wallets", description = "Gestão de carteiras e chaves Pix")
 public class WalletController {
 
-    private final CreateWalletUseCase createWalletUseCase;
-    private final RegisterPixKeyUseCase registerPixKeyUseCase;
-    private final DepositUseCase depositUseCase;
-    private final WithdrawUseCase withdrawUseCase;
-    private final GetBalanceUseCase getBalanceUseCase;
+        private final CreateWalletUseCase createWalletUseCase;
+        private final RegisterPixKeyUseCase registerPixKeyUseCase;
+        private final DepositUseCase depositUseCase;
+        private final WithdrawUseCase withdrawUseCase;
+        private final GetBalanceUseCase getBalanceUseCase;
 
-    @PostMapping
-    @Operation(summary = "Cria uma nova carteira", description = "Cria uma carteira vazia com saldo zero.")
-    @ApiResponses(value = {
-            @ApiResponse(responseCode = "201", description = "Carteira criada com sucesso"),
-            @ApiResponse(responseCode = "400", description = "Requisição inválida")
-    })
-    public ResponseEntity<CreateWalletResponseDto> createWallet() {
-        UUID walletId = createWalletUseCase.execute();
-        return ResponseEntity.status(HttpStatus.CREATED)
-                .body(new CreateWalletResponseDto(walletId));
-    }
+        @PostMapping
+        @Operation(summary = "Cria uma nova carteira", description = "Cria uma carteira vazia com saldo zero.")
+        @ApiResponses(value = {
+                        @ApiResponse(responseCode = "201", description = "Carteira criada com sucesso"),
+                        @ApiResponse(responseCode = "400", description = "Requisição inválida")
+        })
+        public ResponseEntity<CreateWalletResponseDto> createWallet() {
+                UUID walletId = createWalletUseCase.execute();
+                return ResponseEntity.status(HttpStatus.CREATED)
+                                .body(new CreateWalletResponseDto(walletId));
+        }
 
-    @PostMapping("/{id}/pix-keys")
-    @Operation(summary = "Registra uma chave Pix", description = "Vincula uma nova chave Pix a uma carteira existente.")
-    @ApiResponses(value = {
-            @ApiResponse(responseCode = "201", description = "Chave Pix registrada com sucesso"),
-            @ApiResponse(responseCode = "404", description = "Carteira não encontrada"),
-            @ApiResponse(responseCode = "422", description = "Regra de negócio violada (ex: chave já existente)")
-    })
-    public ResponseEntity<RegisterPixKeyResponseDto> registerPixKey(
-            @PathVariable @Parameter(description = "ID da carteira") UUID id,
-            @Valid @RequestBody RegisterPixKeyRequestDto request) {
+        @PostMapping("/{id}/pix-keys")
+        @Operation(summary = "Registra uma chave Pix", description = "Vincula uma nova chave Pix a uma carteira existente.")
+        @ApiResponses(value = {
+                        @ApiResponse(responseCode = "201", description = "Chave Pix registrada com sucesso"),
+                        @ApiResponse(responseCode = "404", description = "Carteira não encontrada"),
+                        @ApiResponse(responseCode = "422", description = "Regra de negócio violada (ex: chave já existente)")
+        })
+        public ResponseEntity<RegisterPixKeyResponseDto> registerPixKey(
+                        @PathVariable @Parameter(description = "ID da carteira") UUID id,
+                        @Valid @RequestBody RegisterPixKeyRequestDto request) {
 
-        PixKey pixKey = registerPixKeyUseCase.execute(id, request.getType(), request.getValue());
-        return ResponseEntity.status(HttpStatus.CREATED)
-                .body(new RegisterPixKeyResponseDto(pixKey.getType(), pixKey.getValue()));
-    }
+                PixKey pixKey = registerPixKeyUseCase.execute(id, request.getType(), request.getValue());
+                return ResponseEntity.status(HttpStatus.CREATED)
+                                .body(new RegisterPixKeyResponseDto(pixKey.getType(), pixKey.getValue()));
+        }
 
-    @PostMapping("/{id}/deposit")
-    @Operation(summary = "Realiza um depósito", description = "Adiciona saldo a uma carteira e gera um registro no Ledger.")
-    @ApiResponses(value = {
-            @ApiResponse(responseCode = "204", description = "Depósito realizado com sucesso"),
-            @ApiResponse(responseCode = "404", description = "Carteira não encontrada")
-    })
-    public ResponseEntity<Void> deposit(
-            @PathVariable @Parameter(description = "ID da carteira") UUID id,
-            @Valid @RequestBody TransactionRequestDto request) {
+        @PostMapping("/{id}/deposit")
+        @Operation(summary = "Realiza um depósito", description = "Adiciona saldo a uma carteira e gera um registro no Ledger.")
+        @ApiResponses(value = {
+                        @ApiResponse(responseCode = "204", description = "Depósito realizado com sucesso"),
+                        @ApiResponse(responseCode = "404", description = "Carteira não encontrada")
+        })
+        public ResponseEntity<Void> deposit(
+                        @PathVariable @Parameter(description = "ID da carteira") UUID id,
+                        @Valid @RequestBody TransactionRequestDto request) {
 
-        depositUseCase.execute(id, new Money(request.getAmount()));
-        return ResponseEntity.noContent().build();
-    }
+                depositUseCase.execute(id, new Money(request.getAmount()));
+                return ResponseEntity.noContent().build();
+        }
 
-    @PostMapping("/{id}/withdraw")
-    @Operation(summary = "Realiza um saque", description = "Remove saldo de uma carteira, gera um registro no Ledger e valida saldo insuficiente.")
-    @ApiResponses(value = {
-            @ApiResponse(responseCode = "204", description = "Saque realizado com sucesso"),
-            @ApiResponse(responseCode = "404", description = "Carteira não encontrada"),
-            @ApiResponse(responseCode = "422", description = "Saldo insuficiente")
-    })
-    public ResponseEntity<Void> withdraw(
-            @PathVariable @Parameter(description = "ID da carteira") UUID id,
-            @Valid @RequestBody TransactionRequestDto request) {
+        @PostMapping("/{id}/withdraw")
+        @Operation(summary = "Realiza um saque", description = "Remove saldo de uma carteira, gera um registro no Ledger e valida saldo insuficiente.")
+        @ApiResponses(value = {
+                        @ApiResponse(responseCode = "204", description = "Saque realizado com sucesso"),
+                        @ApiResponse(responseCode = "404", description = "Carteira não encontrada"),
+                        @ApiResponse(responseCode = "422", description = "Saldo insuficiente")
+        })
+        public ResponseEntity<Void> withdraw(
+                        @PathVariable @Parameter(description = "ID da carteira") UUID id,
+                        @Valid @RequestBody TransactionRequestDto request) {
 
-        withdrawUseCase.execute(id, new Money(request.getAmount()));
-        return ResponseEntity.noContent().build();
-    }
+                withdrawUseCase.execute(id, new Money(request.getAmount()));
+                return ResponseEntity.noContent().build();
+        }
 
-    @GetMapping("/{id}/balance")
-    @Operation(summary = "Consulta o saldo", description = "Consulta o saldo atual da carteira ou o saldo em um momento específico (at query param).")
-    @ApiResponses(value = {
-            @ApiResponse(responseCode = "200", description = "Saldo consultado com sucesso", content = @Content(schema = @Schema(implementation = BalanceResponseDto.class))),
-            @ApiResponse(responseCode = "404", description = "Carteira não encontrada")
-    })
-    public ResponseEntity<BalanceResponseDto> getBalance(
-            @PathVariable @Parameter(description = "ID da carteira") UUID id,
-            @RequestParam(required = false) @Parameter(description = "Timestamp para consulta de saldo histórico (ISO 8601). Ex: 2026-01-11T13:00:00") @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime at) {
+        @GetMapping("/{id}/balance")
+        @Operation(summary = "Consulta o saldo", description = "Consulta o saldo atual da carteira ou o saldo em um momento específico (at query param).")
+        @ApiResponses(value = {
+                        @ApiResponse(responseCode = "200", description = "Saldo consultado com sucesso", content = @Content(schema = @Schema(implementation = BalanceResponseDto.class))),
+                        @ApiResponse(responseCode = "404", description = "Carteira não encontrada")
+        })
+        public ResponseEntity<BalanceResponseDto> getBalance(
+                        @PathVariable @Parameter(description = "ID da carteira") UUID id,
+                        @RequestParam(required = false) @Parameter(description = "Timestamp para consulta de saldo histórico (ISO 8601). Ex: 2026-01-11T13:00:00") @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime at) {
 
-        Money balance = getBalanceUseCase.execute(id, at);
-        return ResponseEntity
-                .ok(new BalanceResponseDto(id, balance.getAmount(), at != null ? at : LocalDateTime.now()));
-    }
+                Money balance = getBalanceUseCase.execute(id, at);
+                return ResponseEntity
+                                .ok(new BalanceResponseDto(id, balance.getAmount(),
+                                                at != null ? at : LocalDateTime.now()));
+        }
 }

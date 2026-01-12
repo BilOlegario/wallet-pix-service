@@ -41,26 +41,21 @@ public class SendPixUseCaseImpl implements SendPixUseCase {
         public PixTransfer execute(UUID senderWalletId, PixKeyType receiverKeyType,
                         String receiverKeyValue, Money amount, String idempotencyKey) {
 
-                // 1. Check Idempotency
                 if (!idempotencyRepository.isNotProcessed(SCOPE, idempotencyKey)) {
                         log.warn("Tentativa de Pix duplicado detectada. scope={}, key={}", SCOPE, idempotencyKey);
                         throw new IllegalStateException("Operação já processada para esta chave de idempotência");
                 }
 
-                // 2. Validate Wallet
                 Wallet senderWallet = walletRepository.findById(senderWalletId)
                                 .orElseThrow(() -> new ResourceNotFoundException("Carteira de origem não encontrada"));
 
-                // 3. Process Debit (Money object handles balance validation)
                 senderWallet.withdraw(amount);
                 walletRepository.save(senderWallet);
 
-                // 4. Generate EndToEndID
                 String endToEndId = "E" + UUID.randomUUID().toString().replace("-", "").substring(0, 31);
                 log.info("Iniciando transferência Pix. endToEndId={}, idempotencyKey={}, amount={}",
                                 endToEndId, idempotencyKey, amount.getAmount());
 
-                // 5. Create Ledger Entry
                 LedgerEntry ledgerEntry = new LedgerEntry(
                                 UUID.randomUUID(),
                                 senderWalletId,
@@ -70,7 +65,6 @@ public class SendPixUseCaseImpl implements SendPixUseCase {
                                 LocalDateTime.now());
                 ledgerRepository.save(ledgerEntry);
 
-                // 6. Create and Save Pix Transfer
                 PixTransfer transfer = new PixTransfer(
                                 UUID.randomUUID(),
                                 endToEndId,
@@ -83,7 +77,6 @@ public class SendPixUseCaseImpl implements SendPixUseCase {
                                 LocalDateTime.now());
                 pixTransferRepository.save(transfer);
 
-                // 7. Mark Idempotency
                 idempotencyRepository.markAsProcessed(SCOPE, idempotencyKey);
 
                 log.info("Transferência Pix criada com sucesso. endToEndId={}", endToEndId);

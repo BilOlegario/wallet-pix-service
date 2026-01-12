@@ -35,7 +35,6 @@ public class ProcessPixWebhookUseCaseImpl implements ProcessPixWebhookUseCase {
     public void execute(String eventId, String endToEndId, PixStatus newStatus) {
         log.info("Recebido webhook Pix. eventId={}, endToEndId={}, status={}", eventId, endToEndId, newStatus);
 
-        // 1. Idempotency Check
         if (!idempotencyRepository.isNotProcessed(SCOPE, eventId)) {
             log.info("Evento de webhook já processado. eventId={}", eventId);
             return;
@@ -44,7 +43,6 @@ public class ProcessPixWebhookUseCaseImpl implements ProcessPixWebhookUseCase {
                 .orElseThrow(() -> new ResourceNotFoundException("Transferência Pix não encontrada"));
 
         if (transfer.getStatus() != PixStatus.PENDING) {
-            // Já processado (Idempotência do Webhook)
             return;
         }
 
@@ -53,14 +51,12 @@ public class ProcessPixWebhookUseCaseImpl implements ProcessPixWebhookUseCase {
         } else if (newStatus == PixStatus.REJECTED) {
             transfer.reject();
 
-            // Rollback Balance
             Wallet wallet = walletRepository.findById(transfer.getSenderWalletId())
                     .orElseThrow(() -> new ResourceNotFoundException("Carteira não encontrada para estorno"));
 
             wallet.deposit(transfer.getAmount());
             walletRepository.save(wallet);
 
-            // Record Ledger Entry for Rollback
             LedgerEntry ledgerEntry = new LedgerEntry(
                     UUID.randomUUID(),
                     wallet.getId(),
@@ -73,7 +69,6 @@ public class ProcessPixWebhookUseCaseImpl implements ProcessPixWebhookUseCase {
 
         pixTransferRepository.save(transfer);
 
-        // 2. Mark Idempotency
         idempotencyRepository.markAsProcessed(SCOPE, eventId);
         log.info("Processamento de webhook finalizado. endToEndId={}, status={}", endToEndId, newStatus);
     }

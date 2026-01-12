@@ -1,3 +1,7 @@
+br\com\walletpix\domain\entity\WalletTest.class
 br\com\walletpix\presentation\controller\ConcurrencyIntegrationTest.class
+br\com\walletpix\presentation\controller\PixTransferIntegrationTest.class
 br\com\walletpix\BaseIntegrationTest.class
+br\com\walletpix\domain\valueobject\MoneyTest.class
+br\com\walletpix\presentation\controller\WalletControllerBalanceIntegrationTest.class
 br\com\walletpix\presentation\controller\WalletControllerIntegrationTest.class

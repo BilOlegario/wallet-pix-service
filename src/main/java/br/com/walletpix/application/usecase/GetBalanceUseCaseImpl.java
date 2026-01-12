@@ -21,20 +21,17 @@ public class GetBalanceUseCaseImpl implements GetBalanceUseCase {
 
     @Override
     public Money execute(UUID walletId, LocalDateTime at) {
-        // For historical balance
         if (at != null) {
             if (at.isAfter(LocalDateTime.now())) {
                 throw new InvalidHistoricalDateException();
             }
 
-            // Check if wallet exists first
             walletRepository.findById(walletId)
                     .orElseThrow(() -> new ResourceNotFoundException("Carteira não encontrada"));
 
             return ledgerRepository.getBalanceAt(walletId, at);
         }
 
-        // For current balance
         Wallet wallet = walletRepository.findById(walletId)
                 .orElseThrow(() -> new ResourceNotFoundException("Carteira não encontrada"));
 

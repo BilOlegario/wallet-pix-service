@@ -34,7 +34,6 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(Exception.class)
     public ResponseEntity<ErrorResponse> handleGeneralException(Exception ex) {
         ErrorResponse error = new ErrorResponse("Ocorreu um erro inesperado no servidor", LocalDateTime.now());
-        // Em produção, imprimir stacktrace apenas em logs, não na resposta
         return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(error);
     }
 }
